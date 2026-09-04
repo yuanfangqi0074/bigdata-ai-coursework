@@ -50,6 +50,57 @@ metastore_db/
 .vscode/
 *.swp
 
-# ---- 环境变量（含密钥，绝不提交）----
+# ============================================================
+# ---- 敏感信息（作业要求：不得上传 API Key、密码、隐私文件）----
+# ============================================================
+
+# 环境变量
 .env
-.env.local
+.env.*
+!.env.example
+
+# 各类密钥与令牌文件
+*.key
+*.pem
+*.p12
+*.pfx
+*.crt
+*.cer
+*.jks
+*.keystore
+id_rsa*
+id_ed25519*
+id_dsa*
+*.ppk
+
+# 云服务凭证
+credentials.json
+credentials*.json
+service-account*.json
+.secret
+.secrets
+secrets/
+.aws/
+.azure/
+.gcloud/
+config/gcloud/
+
+# 笔记本输出（可能含密钥、token、个人信息）
+.ipynb_checkpoints/
+
+# 含敏感词的配置文件
+*secret*
+*credential*
+*token*.json
+*token*.yaml
+*token*.yml
+*password*
+
+# 本地笔记与草稿（可能含未核查内容或个人隐私）
+notes-private/
+private/
+drafts/
+TODO-private.md
+
+# ---------------- 以上规则之外，提交前仍应人工检查 ----------------
+# 建议每次提交前执行：git status 逐条确认，不确定的文件一律不提交

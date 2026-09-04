@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>概念学习资料：Agent</title>
+<style>
+:root{--fg:#24292f;--mut:#57606a;--line:#d0d7de;--acc:#0969da;--box:#f6f8fa;--warn:#fff8c5;--tip:#ddf4ff;--ok:#dafbe1}
+*{box-sizing:border-box}
+body{margin:0;padding:32px 20px 72px;background:#fff;color:var(--fg);font:16px/1.75 -apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif}
+.wrap{max-width:840px;margin:0 auto}
+h1{font-size:26px;margin:0 0 8px;line-height:1.3}
+h2{font-size:19px;margin:36px 0 12px;padding-bottom:6px;border-bottom:1px solid var(--line)}
+h3{font-size:16px;margin:22px 0 8px;color:var(--fg)}
+.meta{color:var(--mut);font-size:14px;margin-bottom:26px}
+.box{background:var(--box);border:1px solid var(--line);border-left:3px solid var(--acc);border-radius:6px;padding:14px 18px;margin:16px 0}
+.tip{background:var(--tip);border-left-color:#0969da}
+.warn{background:var(--warn);border-left-color:#bf8700}
+.ok{background:var(--ok);border-left-color:#1a7f37}
+ul,ol{padding-left:24px}
+li{margin:6px 0}
+table{border-collapse:collapse;width:100%;margin:16px 0;font-size:15px}
+th,td{border:1px solid var(--line);padding:9px 12px;text-align:left;vertical-align:top}
+th{background:var(--box);font-weight:600}
+code{background:var(--box);padding:2px 6px;border-radius:4px;font-size:14px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+a{color:var(--acc);word-break:break-all}
+.lead{font-size:17px}
+.src{font-size:14px;line-height:1.9}
+.foot{margin-top:44px;padding-top:16px;border-top:1px solid var(--line);color:var(--mut);font-size:13px}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<h1>概念学习资料：Agent</h1>
+<div class="meta">生成工具：concept-learning-material Skill ｜ 生成日期：2026-09-04 ｜ 课程：大数据与人工智能</div>
+
+<h2>一句话理解</h2>
+<div class="box lead">
+Agent 不是"更聪明的模型"，而是<strong>把下一步做什么的决定权交给了模型</strong>的系统。
+判断一个系统是不是 Agent，不看它用了多强的模型，只看一件事：<strong>决策权在代码里，还是在模型里。</strong>
+</div>
+<p>这个判断标准是我读 Anthropic 的工程博客后自己提炼的。原文给了 Workflow 和 Agent 的定义，
+但真正让我记住的是它背后那句潜台词——架构选错的代价，是多花几倍的钱和延迟，换来一个更难调试的系统。
+所以与其记定义，不如记这条判据。</p>
+
+<h2>学习目标</h2>
+<ul>
+<li>能说清 Agent 与 Workflow 的分界，拿到一个系统能判断它属于哪一类</li>
+<li>能画出 Agent 的运行循环，并指出每一轮里什么进了上下文</li>
+<li>能举出一个 Agent 真正比固定流程更合适的场景，也能举出一个不该上 Agent 的场景</li>
+<li>知道 Agent 的主要失效模式，以及为什么"自主性"是有代价的</li>
+</ul>
+
+<h2>核心机制与组成</h2>
+
+<h3>运行循环</h3>
+<p>Agent 的核心是一个不断重复的循环：</p>
+<div class="box">
+<strong>规划（plan）→ 行动（act）→ 观察（observe）→ 回到规划</strong>
+</div>
+<ol>
+<li>接到一个目标，模型决定这一步该做什么</li>
+<li>调用一个工具（查数据库、跑代码、搜索、读文件）</li>
+<li>工具返回的结果作为新信息进入上下文</li>
+<li>模型基于更新后的上下文，重新决定下一步</li>
+<li>重复，直到达成目标或触发停止条件</li>
+</ol>
+<p>关键在第 3、4 步：<strong>工具返回的结果会真实改变下一步的决策</strong>。
+这正是它和"按剧本走完所有步骤"的根本区别。</p>
+
+<h3>组成要件</h3>
+<table>
+<tr><th>组成部分</th><th>作用</th><th>缺失会怎样</th></tr>
+<tr><td>目标</td><td>循环的终点判据</td><td>模型不知道何时该停</td></tr>
+<tr><td>工具集</td><td>模型能采取的行动</td><td>退化成纯对话，无法影响外部世界</td></tr>
+<tr><td>上下文</td><td>每一轮的决策依据</td><td>看不到历史，无法连续推理</td></tr>
+<tr><td>停止条件</td><td>最大轮数、超时、预算上限</td><td>可能无限循环，成本失控</td></tr>
+</table>
+
+<h3>基础构建块：增强型 LLM</h3>
+<p>Anthropic 把 Agent 系统的最小单元称为<strong>增强型 LLM</strong>：
+一个被配上<strong>检索、工具、记忆</strong>的大模型，并且模型能自己决定什么时候查、用哪个工具、记住什么。
+所有复杂的 Agentic 系统，都是在这个块上叠加出来的。</p>
+
+<h3>Workflow 与 Agent 的分界</h3>
+<table>
+<tr><th></th><th>Workflow</th><th>Agent</th></tr>
+<tr><td>路径</td><td>由代码预先定义</td><td>由模型动态决定</td></tr>
+<tr><td>可预测性</td><td>高</td><td>低</td></tr>
+<tr><td>成本与延迟</td><td>相对可控</td><td>随轮数线性上升</td></tr>
+<tr><td>适合</td><td>任务边界清楚，要求稳定一致</td><td>步骤数量事先说不清</td></tr>
+</table>
+<div class="box tip">
+Anthropic 给出的默认值很反直觉：<strong>先找最简单的方案，很多场景根本不需要 Agent。</strong>
+把单次调用加上检索和示例优化好，往往就够了。2026 年 3 月 Claude 官方博客进一步把生产中最常见的
+模式收敛为三种：串行、并行、评估者-优化器，并建议默认从串行起步。
+</div>
+
+<h2>具体应用场景</h2>
+<div class="box ok">
+<strong>场景：客服处理"吊牌扔了想退货"</strong><br><br>
+用户说："我上周买的鞋想退，但吊牌已经扔了。"<br><br>
+系统需要：查订单确认购买时间和金额 → 检索退货政策，判断无吊牌是否影响 →
+查该用户的历史退货记录 → 决定是批准、拒绝还是转人工 → 若批准则调用退款接口 → 组织回复。<br><br>
+<strong>为什么这里适合 Agent：</strong>步骤的数量和走向取决于查出来的结果。
+如果用户是老客且无异常退货记录，可能两步就结束；如果订单超过 30 天，会走到完全不同的分支。
+这种"路径无法事先写死"的特性，正是 Agent 的用武之地。
+</div>
+
+<h2>容易混淆的问题与使用边界</h2>
+<div class="box warn">
+<strong>① 不是所有"AI 应用"都是 Agent。</strong>
+把用户问题分类后转给不同提示词，这是 Workflow（路由模式），不是 Agent。
+判断标准始终是"决策权在谁手里"，而不是系统自称什么。
+</div>
+<div class="box warn">
+<strong>② 自主性是有代价的。</strong>
+Agent 用更高的延迟和成本去换任务表现。而且错误会累积——
+单步的小错会在后续轮次被当作事实继续推理，滚雪球式放大。
+自主性越高，这个风险越大。
+</div>
+<div class="box warn">
+<strong>③ 上下文是硬约束。</strong>
+Agent 每跑一轮，工具返回结果就写入上下文。跑几十轮后，
+早期的约束可能被挤到中间甚至挤出窗口，导致 Agent 开始违反最初的要求。
+这不是模型"变笨了"，见配套资料 <code>llm-context.html</code>。
+</div>
+<div class="box warn">
+<strong>④ Agent 解决不了反馈缺失的问题。</strong>
+Anthropic 指出客服和编程之所以适合 Agent，是因为它们都有<strong>强反馈闭环</strong>
+（客服有解决率，编程有测试运行结果）。
+如果一个任务连"做对了没有"都无法判断，加 Agent 只会让失败更难被发现。
+</div>
+<div class="box warn">
+<strong>⑤ 框架会遮蔽问题。</strong>
+各类 Agent 框架降低了上手门槛，但抽象层会挡住真实的提示词和响应，
+出问题时很难调试。官方建议先用 API 直接跑通，要用框架就必须搞懂它底下在做什么。
+</div>
+
+<h2>自测问题</h2>
+<ol>
+<li>一个系统把用户问题分成三类，每类走不同的提示词和工具集。它是 Workflow 还是 Agent？说明你的判断依据。</li>
+<li>为什么 Anthropic 建议"优先找最简单的方案，只在必要时增加复杂度"？如果违背这条，具体会在哪些指标上付出代价？</li>
+<li>Agent 的停止条件为什么必须显式设置？如果只靠模型自己判断"做完了"，可能出现什么问题？</li>
+<li>举一个你身边"看起来该用 Agent，其实用固定流程更好"的例子，并说明理由。</li>
+</ol>
+
+<h2>资料来源</h2>
+<div class="src">
+<p><strong>一手来源</strong></p>
+<ol>
+<li>Anthropic. <em>Building Effective AI Agents</em>（2024-12）.<br>
+<a href="https://www.anthropic.com/research/building-effective-agents">https://www.anthropic.com/research/building-effective-agents</a><br>
+实测状态：HTTP 200（2026-09-04 验证）。本资料的 Workflow/Agent 分界、增强型 LLM、"先找最简方案"建议均出自此文。</li>
+<li>Claude by Anthropic. <em>Common workflow patterns for AI agents, and when to use them</em>（2026-03-05）.<br>
+<a href="https://claude.com/blog/common-workflow-patterns-for-ai-agents-and-when-to-use-them">https://claude.com/blog/common-workflow-patterns-for-ai-agents-and-when-to-use-them</a><br>
+实测状态：HTTP 200（2026-09-04 验证）。三种生产常用模式的收敛结论出自此文。</li>
+</ol>
+<p><strong>未采用的来源</strong>：Wikipedia 词条 <em>Intelligent agent</em> 与
+Lilian Weng 的 <em>LLM Powered Autonomous Agents</em> 在本次生成环境中无法访问（连接超时），
+因无法验证，按 Skill 的来源规则剔除，未写入本资料。</p>
+</div>
+
+<h2>核查记录</h2>
+<div class="box">
+<ul>
+<li><strong>来源验证方式</strong>：对每一条链接实际发起 HTTP 请求确认状态码，非 200 一律剔除，未凭记忆填写任何链接。</li>
+<li><strong>解释来源</strong>：文中"决策权在谁手里"这条判据，是我在读完 Anthropic 原文后自己提炼的表述，
+原文的表述是"LLMs dynamically direct their own processes and tool usage"。</li>
+<li><strong>待人工复核</strong>：客服退货场景为我构造的示例，用于说明路径不可预知的特性，
+并非来自某篇来源文章的真实案例，引用时请注意区分。</li>
+</ul>
+</div>
+
+<div class="foot">
+由 <code>.workbuddy/skills/concept-learning-material/SKILL.md</code> 生成 ｜ 配套资料：llm-context.html、skill.html、concept-relationship.md
+</div>
+
+</div>
+</body>
+</html>

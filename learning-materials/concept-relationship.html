@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>概念关系说明：Agent、上下文、Skill</title>
+<style>
+:root{--fg:#24292f;--mut:#57606a;--line:#d0d7de;--acc:#0969da;--box:#f6f8fa;--warn:#fff8c5;--tip:#ddf4ff;--ok:#dafbe1}
+*{box-sizing:border-box}
+body{margin:0;padding:32px 20px 72px;background:#fff;color:var(--fg);font:16px/1.75 -apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif}
+.wrap{max-width:860px;margin:0 auto}
+h1{font-size:26px;margin:0 0 8px;line-height:1.3}
+h2{font-size:19px;margin:36px 0 12px;padding-bottom:6px;border-bottom:1px solid var(--line)}
+h3{font-size:16px;margin:24px 0 8px}
+.meta{color:var(--mut);font-size:14px;margin-bottom:26px}
+.box{background:var(--box);border:1px solid var(--line);border-left:3px solid var(--acc);border-radius:6px;padding:14px 18px;margin:16px 0}
+.tip{background:var(--tip);border-left-color:#0969da}
+.warn{background:var(--warn);border-left-color:#bf8700}
+.ok{background:var(--ok);border-left-color:#1a7f37}
+ul,ol{padding-left:24px}
+li{margin:6px 0}
+table{border-collapse:collapse;width:100%;margin:16px 0;font-size:15px}
+th,td{border:1px solid var(--line);padding:9px 12px;text-align:left;vertical-align:top}
+th{background:var(--box);font-weight:600}
+code{background:var(--box);padding:2px 6px;border-radius:4px;font-size:14px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+pre{background:var(--box);padding:14px 16px;border-radius:6px;overflow-x:auto;font-size:13.5px;line-height:1.6}
+a{color:var(--acc);word-break:break-all}
+.lead{font-size:17px}
+.src{font-size:14px;line-height:1.9}
+.foot{margin-top:44px;padding-top:16px;border-top:1px solid var(--line);color:var(--mut);font-size:13px}
+.diagram{background:#fbfcfd;border:1px solid var(--line);border-radius:8px;padding:12px;margin:20px 0}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<h1>概念关系说明：Agent、大模型的上下文、Skill</h1>
+<div class="meta">生成日期：2026-09-04 ｜ 课程：大数据与人工智能 ｜ 配套：agent.html、llm-context.html、skill.html</div>
+
+<h2>一句话概括</h2>
+<div class="box lead">
+<strong>上下文是资源，Agent 是消耗这份资源的决策循环，Skill 是按需进入这份资源的流程知识。</strong>
+三者不是并列关系，而是一条供给链。
+</div>
+
+<h2>关系图</h2>
+<div class="diagram">
+<svg viewBox="0 0 680 250" width="100%" role="img" xmlns="http://www.w3.org/2000/svg" font-family="var(--font-sans)">
+<title>Agent、上下文与 Skill 的循环关系</title>
+<defs>
+<marker id="ar" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+<path d="M2 1L8 5L2 9" fill="none" stroke="context-stroke" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+</marker>
+</defs>
+
+<rect x="28" y="92" width="164" height="76" rx="10" fill="#ddf4ff" stroke="#0969da" stroke-width="1"/>
+<text x="110" y="118" text-anchor="middle" font-size="15" font-weight="600" fill="#0C447C">Skill</text>
+<text x="110" y="140" text-anchor="middle" font-size="12" fill="#185FA5">流程知识库</text>
+<text x="110" y="156" text-anchor="middle" font-size="12" fill="#185FA5">存在于文件系统</text>
+
+<rect x="256" y="92" width="172" height="76" rx="10" fill="#fff8c5" stroke="#bf8700" stroke-width="1"/>
+<text x="342" y="118" text-anchor="middle" font-size="15" font-weight="600" fill="#7a5c00">上下文窗口</text>
+<text x="342" y="140" text-anchor="middle" font-size="12" fill="#8a6d00">有限预算</text>
+<text x="342" y="156" text-anchor="middle" font-size="12" fill="#8a6d00">一次性工作台面</text>
+
+<rect x="492" y="92" width="164" height="76" rx="10" fill="#dafbe1" stroke="#1a7f37" stroke-width="1"/>
+<text x="574" y="118" text-anchor="middle" font-size="15" font-weight="600" fill="#085041">Agent 循环</text>
+<text x="574" y="140" text-anchor="middle" font-size="12" fill="#0F6E56">plan → act → observe</text>
+
+<line x1="192" y1="130" x2="252" y2="130" stroke="#57606a" stroke-width="1.5" marker-end="url(#ar)"/>
+<text x="222" y="120" text-anchor="middle" font-size="12" fill="#57606a">①</text>
+
+<line x1="428" y1="130" x2="488" y2="130" stroke="#57606a" stroke-width="1.5" marker-end="url(#ar)"/>
+<text x="458" y="120" text-anchor="middle" font-size="12" fill="#57606a">②</text>
+
+<path d="M574 168 C 574 218, 400 218, 342 168" fill="none" stroke="#57606a" stroke-width="1.5" marker-end="url(#ar)"/>
+<text x="458" y="212" text-anchor="middle" font-size="12" fill="#57606a">③ 工具结果与观察写回</text>
+
+<path d="M574 92 C 574 34, 110 34, 110 92" fill="none" stroke="#57606a" stroke-width="1.5" marker-end="url(#ar)"/>
+<text x="342" y="26" text-anchor="middle" font-size="12" fill="#57606a">④ 依据元数据判断相关后触发</text>
+
+<text x="222" y="150" text-anchor="middle" font-size="11" fill="#57606a">按需注入</text>
+<text x="458" y="150" text-anchor="middle" font-size="11" fill="#57606a">决策依据</text>
+</svg>
+</div>
+
+<h2>对照表</h2>
+<table>
+<tr><th>概念</th><th>本质</th><th>在系统中的角色</th><th>核心约束</th></tr>
+<tr><td>上下文</td><td>一次性的有限工作台面</td><td><strong>资源</strong> — 所有信息的唯一通道</td><td>token 预算有限，且越长越不可靠</td></tr>
+<tr><td>Agent</td><td>plan → act → observe 的决策循环</td><td><strong>消费者</strong> — 读上下文、改上下文</td><td>每轮都在消耗预算，错误会累积</td></tr>
+<tr><td>Skill</td><td>文件夹形态的流程知识</td><td><strong>供给物</strong> — 按需注入上下文</td><td>不被触发就等于不存在</td></tr>
+</table>
+
+<h2>重点一：上下文如何影响 Agent 的工作</h2>
+
+<h3>上下文是 Agent 唯一的"世界状态"</h3>
+<p>Agent 没有别的记忆。它对任务进展的全部了解，就是上下文里那点东西。每一轮循环：</p>
+<ol>
+<li>模型读当前上下文，决定这一步做什么</li>
+<li>调用工具</li>
+<li><strong>工具返回的结果作为新内容写进上下文</strong></li>
+<li>回到第 1 步</li>
+</ol>
+<p>第 3 步是关键：<strong>Agent 每行动一次，上下文就长大一点。</strong></p>
+
+<h3>由此产生的问题</h3>
+<ul>
+<li><strong>自主性越高，消耗越快。</strong>跑 50 轮的 Agent 会把几十轮工具结果全堆进上下文。</li>
+<li><strong>退化是静默的。</strong>没有报错，但早期约束被挤到深处甚至挤出窗口，
+Agent 开始违反项目开头定下的规范——这就是 context rot。</li>
+<li><strong>错误会级联。</strong>单步小错被写进上下文，下一轮又被当作事实继续推理。</li>
+</ul>
+
+<h3>工程上的三种回应</h3>
+<table>
+<tr><th>手段</th><th>做法</th><th>适用</th><th>风险</th></tr>
+<tr><td>压缩</td><td>接近上限时总结，保留架构决策与未解 bug，丢弃冗余工具结果</td><td>需要大量来回对话的任务</td><td>过度压缩会丢掉后来才显出价值的细节</td></tr>
+<tr><td>结构化笔记</td><td>把进度写到上下文之外的文件，需要时读回</td><td>有清晰里程碑的迭代开发</td><td>笔记本身需要维护</td></tr>
+<tr><td>子 Agent 隔离</td><td>子 Agent 深挖数万 token，只回传 1,000–2,000 token 摘要</td><td>并行探索有价值的复杂研究</td><td>主 Agent 拿不到细节</td></tr>
+</table>
+
+<h2>重点二：Skill 如何沉淀可复用的任务知识</h2>
+
+<h3>从"每次重说"到"写一次"</h3>
+<table>
+<tr><th></th><th>提示词</th><th>Skill</th></tr>
+<tr><td>存在形式</td><td>会话里的一段话</td><td>文件系统里的目录</td></tr>
+<tr><td>生命周期</td><td>说完即散</td><td>跨会话、跨项目</td></tr>
+<tr><td>能否版本管理</td><td>不能</td><td>能（跟代码一起提交）</td></tr>
+<tr><td>能否共享</td><td>靠复制粘贴</td><td>靠仓库分发</td></tr>
+<tr><td>能否捆绑代码</td><td>不能</td><td>能，且代码不占上下文</td></tr>
+</table>
+
+<h3>沉淀机制：渐进式披露</h3>
+<ul>
+<li><strong>第 1 层（元数据）</strong>：name + description，启动时就加载，每个约 100 tokens，Agent 靠它判断"该不该用"。</li>
+<li><strong>第 2 层（指令）</strong>：SKILL.md 正文，判断相关时才读入，建议 5k tokens 以内。</li>
+<li><strong>第 3 层（资源与代码）</strong>：附加文件和脚本，需要时才读。脚本执行只回传结果，代码本身不进上下文。</li>
+</ul>
+<p>结果是：<strong>一个 Skill 可以捆绑几十个参考文件，却几乎不占上下文。</strong></p>
+
+<h2>我的判断（个人观点，非来源原文结论）</h2>
+<div class="box warn">
+<strong>Skill 之所以长成现在这个样子，根本原因就是上下文有限。</strong>
+</div>
+<p>理由是这样的：如果上下文无限且用得好（实际上两个条件都不成立，但假设一下），
+那最省事的做法就是把所有知识一次性全塞进系统提示，根本不需要"渐进式披露"、
+不需要把内容拆成三层、不需要费心设计按需加载机制。
+正是"上下文是有限资源"这个硬约束，逼出了 Skill 的整个设计。</p>
+<p>顺着这个逻辑还能推出两点：</p>
+<ol>
+<li><strong>Skill 和上下文管理解决的是不同层次的问题。</strong>
+Skill 减少的是"需要常驻上下文的知识量"；但任务过程本身产生的数据（工具结果、探索轨迹）Skill 管不了，
+那些得靠压缩和子 Agent 隔离。<strong>别指望装了 Skill 就不怕上下文撑爆。</strong></li>
+<li><strong>Agent Skills 被做成开放标准不是偶然。</strong>
+它采用"文件夹 + Markdown"这种最朴素的格式，没有私有协议。要跨平台可移植，
+就必须放弃精巧而封闭的设计——这个取舍和 MCP 是同一个思路。
+技术选型上的克制，往往是被现实约束逼出来的，不是审美偏好。</li>
+</ol>
+
+<h2>一个具体的串联场景</h2>
+<div class="box ok">
+<strong>本仓库的实际工作流</strong>
+<ol>
+<li>在 WorkBuddy 里说"学习一个新概念"</li>
+<li>Agent 扫描已安装 Skill 的<strong>第 1 层元数据</strong>，发现 <code>concept-learning-material</code> 的描述匹配</li>
+<li>Agent 读取 <strong>SKILL.md 正文（第 2 层）</strong>进入<strong>上下文</strong>，
+得知要查来源、要验证链接、要按固定结构输出</li>
+<li>Agent 按流程搜索、验证链接、生成资料，每一步结果都写回<strong>上下文</strong></li>
+<li>若概念很多、上下文吃紧，就需要压缩或拆成子任务</li>
+<li>产出落到 <code>learning-materials/</code>，Skill 本身留在 <code>.workbuddy/skills/</code> 供下次复用</li>
+</ol>
+<p style="margin-bottom:0">这条链里，Skill 决定 Agent 怎么做，上下文决定 Agent 能记住多少，
+两者共同决定了 Agent 最终能走多远。</p>
+</div>
+
+<h2>附：Mermaid 源码</h2>
+<p>便于在支持 Mermaid 的环境中复用：</p>
+<pre>flowchart LR
+    S["Skill<br/>流程知识库<br/>存在于文件系统"]
+    C["上下文窗口<br/>有限预算 · 一次性工作台面"]
+    A["Agent 循环<br/>plan → act → observe"]
+
+    S --&gt;|"① 命中后按需注入"| C
+    C --&gt;|"② 作为唯一的决策依据"| A
+    A --&gt;|"③ 工具结果与观察写回"| C
+    A --&gt;|"④ 依据元数据判断相关后触发"| S</pre>
+
+<h2>资料来源</h2>
+<div class="src">
+本文的机制性描述均来自以下已验证的一手来源，文中未引入新来源：
+<ul>
+<li>Anthropic. <em>Effective context engineering for AI agents</em>. <a href="https://www.anthropic.com/engineering/effective-context-engineering-for-ai-agents">链接</a>（HTTP 200，2026-09-04 验证）</li>
+<li>Anthropic. <em>Equipping agents for the real world with Agent Skills</em>. <a href="https://www.anthropic.com/engineering/equipping-agents-for-the-real-world-with-agent-skills">链接</a>（HTTP 200，2026-09-04 验证）</li>
+<li>Anthropic. <em>Building Effective AI Agents</em>. <a href="https://www.anthropic.com/research/building-effective-agents">链接</a>（HTTP 200，2026-09-04 验证）</li>
+<li>Chroma. <em>Context Rot: How Increasing Input Tokens Impacts LLM Performance</em>. <a href="https://research.trychroma.com/context-rot">链接</a>（HTTP 200，2026-09-04 验证）</li>
+</ul>
+<p><strong>"我的判断"一节为个人观点，非来源原文的结论，请独立评判。</strong></p>
+</div>
+
+<div class="foot">
+由 <code>.workbuddy/skills/concept-learning-material/SKILL.md</code> 生成 ｜ 本文档同时提供 Markdown 版本：<code>concept-relationship.md</code>
+</div>
+
+</div>
+</body>
+</html>

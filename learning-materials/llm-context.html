@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>概念学习资料：大模型的上下文</title>
+<style>
+:root{--fg:#24292f;--mut:#57606a;--line:#d0d7de;--acc:#0969da;--box:#f6f8fa;--warn:#fff8c5;--tip:#ddf4ff;--ok:#dafbe1}
+*{box-sizing:border-box}
+body{margin:0;padding:32px 20px 72px;background:#fff;color:var(--fg);font:16px/1.75 -apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif}
+.wrap{max-width:840px;margin:0 auto}
+h1{font-size:26px;margin:0 0 8px;line-height:1.3}
+h2{font-size:19px;margin:36px 0 12px;padding-bottom:6px;border-bottom:1px solid var(--line)}
+h3{font-size:16px;margin:22px 0 8px}
+.meta{color:var(--mut);font-size:14px;margin-bottom:26px}
+.box{background:var(--box);border:1px solid var(--line);border-left:3px solid var(--acc);border-radius:6px;padding:14px 18px;margin:16px 0}
+.tip{background:var(--tip);border-left-color:#0969da}
+.warn{background:var(--warn);border-left-color:#bf8700}
+.ok{background:var(--ok);border-left-color:#1a7f37}
+ul,ol{padding-left:24px}
+li{margin:6px 0}
+table{border-collapse:collapse;width:100%;margin:16px 0;font-size:15px}
+th,td{border:1px solid var(--line);padding:9px 12px;text-align:left;vertical-align:top}
+th{background:var(--box);font-weight:600}
+code{background:var(--box);padding:2px 6px;border-radius:4px;font-size:14px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+a{color:var(--acc);word-break:break-all}
+.lead{font-size:17px}
+.src{font-size:14px;line-height:1.9}
+.foot{margin-top:44px;padding-top:16px;border-top:1px solid var(--line);color:var(--mut);font-size:13px}
+blockquote{margin:12px 0;padding:8px 16px;border-left:3px solid var(--line);color:var(--mut);font-size:15px}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<h1>概念学习资料：大模型的上下文</h1>
+<div class="meta">生成工具：concept-learning-material Skill ｜ 生成日期：2026-09-04 ｜ 课程：大数据与人工智能</div>
+
+<h2>一句话理解</h2>
+<div class="box lead">
+上下文<strong>不是模型的记忆，而是一次性的工作台面</strong>。
+模型每次生成时能"看到"的全部内容就是上下文；生成结束，台面清空，什么都不留下。
+更要紧的是：这是一张<strong>面积有限的台面</strong>，系统提示、检索资料、对话历史、工具结果、输出空间
+全在上面抢位置。<strong>塞得多，不等于用得好。</strong>
+</div>
+<p>"工作台面"这个比喻是我自己的说法，用来对抗我最容易犯的错——把上下文当成硬盘。
+Anthropic 原文的说法更精确：上下文是<strong>边际收益递减的有限资源</strong>
+（"a finite resource with diminishing marginal returns"）。
+我加"一次性"这层意思，是因为很多人（包括最初的我）会以为多轮对话里模型"记住了"什么，
+其实它只是每次都把历史重新读一遍而已。</p>
+
+<h2>学习目标</h2>
+<ul>
+<li>能列出上下文里到底装着哪几样东西，并说出它们在争抢什么</li>
+<li>能解释为什么"窗口变长"不等于"能力变强"，并给出可验证的证据</li>
+<li>能区分上下文溢出（报错）与上下文腐烂（静默变笨），知道后者更危险</li>
+<li>掌握至少三种应对长上下文的工程手段，并知道各自的适用与风险</li>
+</ul>
+
+<h2>核心机制与组成</h2>
+
+<h3>上下文里装着什么</h3>
+<table>
+<tr><th>组成部分</th><th>说明</th><th>谁来占</th></tr>
+<tr><td>系统提示</td><td>角色、规则、约束</td><td>开发者</td></tr>
+<tr><td>检索内容</td><td>RAG 召回的文档片段</td><td>检索系统</td></tr>
+<tr><td>对话历史</td><td>之前所有轮次的问答</td><td>累积产生</td></tr>
+<tr><td>工具结果</td><td>每次工具调用返回的原始数据</td><td>这个最容易失控</td></tr>
+<tr><td>输出空间</td><td>留给模型生成回答的余量</td><td>模型</td></tr>
+</table>
+<p>它们<strong>共享同一个 token 预算</strong>。工具结果多占一点，对话历史就少一点。
+Anthropic 把它叫做<strong>注意力预算（attention budget）</strong>：每引入一个新 token，都会消耗一部分预算。</p>
+
+<h3>为什么长度会伤害质量</h3>
+<p>Anthropic 给出的原因链是：</p>
+<ol>
+<li><strong>架构层面</strong>：Transformer 让每个 token 都要和所有其他 token 建立联系，
+n 个 token 产生 <strong>n² 量级</strong>的成对关系。上下文越长，模型捕捉这些关系的能力被摊得越薄。</li>
+<li><strong>训练分布</strong>：训练数据里短序列远多于长序列，模型对超长距离依赖的经验本来就少。</li>
+<li><strong>结果是梯度而非断崖</strong>：原文强调这是 "a performance gradient rather than a hard cliff"——
+模型在长上下文下依然很强，只是检索精度和长程推理的<strong>精度下降</strong>。</li>
+</ol>
+<blockquote>
+"as the number of tokens in the context window increases, the model's ability to accurately recall information from that context decreases."<br>
+—— Anthropic, Effective context engineering for AI agents
+</blockquote>
+
+<h3>Chroma 的 Context Rot 研究：几个反直觉的实测结论</h3>
+<p>Chroma 在 2025 年 7 月的报告里测了 <strong>18 个模型</strong>
+（5 个 Anthropic、7 个 OpenAI、3 个 Google、3 个 Qwen），保持任务复杂度不变、只改变输入长度。
+结论比我预想的更细，其中两条跟网上常见的说法对不上：</p>
+<div class="box warn">
+<strong>反直觉发现一：结构连贯反而更差。</strong>
+在全部 <strong>18/18</strong> 个模型上，把 haystack 的句子<strong>打乱</strong>之后，模型表现
+<strong>优于</strong>保留原始逻辑连贯性的版本。去掉局部连贯性会持续提升性能。
+这说明"把材料组织得更有逻辑"未必对模型更友好，得靠实测而不是想当然。
+</div>
+<div class="box warn">
+<strong>反直觉发现二：他们没观测到典型的"中间迷失"位置效应。</strong>
+在他们的 NIAH 实验（8 种输入长度 × 11 个 needle 位置）中，
+<strong>没有发现显著的位置差异</strong>。这一点必须说清楚——
+"中间迷失"来自 Liu 等人 2023 年的另一项研究，而 Chroma 的实验没有复现出位置效应。
+<strong>两者测的不是同一件事，不能混为一谈。</strong>
+</div>
+<p>报告中稳定成立的是另外几条：</p>
+<ul>
+<li><strong>长度本身就会降低可靠性</strong>：任务复杂度不变、只加长输入，性能依然下降。</li>
+<li><strong>干扰项即使只有一个也会拖后腿</strong>：加 1 个干扰项就低于基线，加 4 个进一步恶化。</li>
+<li><strong>聚焦输入远胜全量输入</strong>：LongMemEval 实验里，只给相关的约 <strong>300 tokens</strong>
+显著优于给完整的约 <strong>113k tokens</strong>。因为全量输入迫使模型同时做"检索 + 推理"，而聚焦输入只需推理。</li>
+<li><strong>不同模型家族失败方式不同</strong>：Claude 系列倾向保守弃权（宁可说找不到），
+GPT 系列更容易给出自信但错误的答案。</li>
+</ul>
+<p>报告自己<strong>没有给出确定机制</strong>，明确说这需要更深入的机械可解释性研究。
+这点我觉得很值得学习——一份诚实的报告会写清楚自己不知道什么。</p>
+
+<h2>具体应用场景</h2>
+<div class="box ok">
+<strong>场景：代码 Agent 做大型仓库迁移</strong><br><br>
+一个 Agent 被要求把一个项目从旧框架迁到新框架。它会反复读文件、跑测试、看报错堆栈、
+改代码、再跑测试。Anthropic 指出，这类任务"跨越几十分钟到数小时的连续工作"，
+token 数必然超出上下文窗口。<br><br>
+<strong>会出什么问题：</strong>几十轮之后，项目开头定下的迁移规范被挤到上下文深处，
+或者干脆被挤出去。Agent 看起来一切正常、没有报任何错，但开始写出不符合新框架约定的代码。
+这就是典型的<strong>上下文腐烂</strong>——静默劣化，监控系统抓不到。<br><br>
+<strong>工程应对（Anthropic 给出的三种手段）：</strong>
+<ul>
+<li><strong>压缩（Compaction）</strong>：第一手段。对话接近上限时让模型总结，
+保留架构决策、未解决的 bug、实现细节，丢弃冗余的工具结果。Claude Code 的做法是
+用压缩后的上下文 + <strong>最近访问过的 5 个文件</strong>继续。调优顺序是先保召回率、再提精确率。</li>
+<li><strong>结构化笔记</strong>：让 Agent 把进度写到上下文之外的文件（如 <code>NOTES.md</code>），
+上下文重置后再读回来。</li>
+<li><strong>子 Agent 隔离</strong>：主 Agent 只做协调，探索工作交给子 Agent。
+子 Agent 可以消耗数万 token 深挖，但只回传 <strong>1,000–2,000 tokens</strong> 的蒸馏摘要。</li>
+</ul>
+</div>
+
+<h2>容易混淆的问题与使用边界</h2>
+<div class="box warn">
+<strong>① 上下文窗口 ≠ 有效容量。</strong>
+厂商宣传的窗口是"能塞多少"，不是"能用好多少"。Chroma 的数据说明，
+即便是最新的前沿模型，在简单任务上也会随输入变长而退化。
+</div>
+<div class="box warn">
+<strong>② 溢出和腐烂是两回事，后者更危险。</strong>
+<strong>上下文溢出</strong>是硬性报错，超过窗口上限，API 直接报错，容易发现。
+<strong>上下文腐烂</strong>是静默的：没报错，但输出质量一路下滑。
+生产环境里真正难查的是后者。
+</div>
+<div class="box warn">
+<strong>③ 上下文不是记忆，没有跨会话持久性。</strong>
+你以为模型"记得"上周的对话，其实只是那段记录被重新塞进了上下文。
+要真正的持久化，得靠上下文之外的存储（笔记文件、memory tool、数据库）。
+</div>
+<div class="box warn">
+<strong>④ "多塞点资料更保险"常常适得其反。</strong>
+LongMemEval 的数据很直白：300 tokens 的聚焦输入打不过 113k 的全量输入？不，是<strong>反过来</strong>——
+聚焦输入显著更好。无关内容不是中性的，它会主动损害性能。
+</div>
+<div class="box warn">
+<strong>⑤ 压缩本身也有风险。</strong>
+Anthropic 明确警告：过度激进的压缩会丢掉"当时看起来不重要、后来才显出价值"的细节。
+所以顺序是先保召回、再删冗余，不能一上来就猛删。
+</div>
+<div class="box warn">
+<strong>⑥ 确定性任务不该指望 LLM。</strong>
+Chroma 的重复词复制实验显示，连"复制一串词"这种程序本该零误差的任务，
+模型在长输入下都会出错、拒绝或凭空生成随机词。
+这类活应该交给传统代码，而不是往上下文里塞。
+</div>
+
+<h2>自测问题</h2>
+<ol>
+<li>一个 Agent 跑了 50 轮，一次错都没报，但开始违反项目开头定下的规范。最可能是什么原因？你会怎么验证这个猜测？</li>
+<li>Chroma 的实验里，"聚焦输入（约 300 tokens）"比"全量输入（约 113k tokens）"表现更好。
+这个结果说明了什么？它和"上下文窗口越大越好"的说法冲突在哪里？</li>
+<li>有人说"把资料组织得更有逻辑，模型就更好懂"。Chroma 的发现对此提出了什么挑战？</li>
+<li>上下文溢出和上下文腐烂，哪个在生产环境更危险？为什么？</li>
+<li>如果要你给一个长任务 Agent 设计上下文策略，压缩、结构化笔记、子 Agent 隔离
+你会按什么顺序考虑？各自的适用条件是什么？</li>
+</ol>
+
+<h2>资料来源</h2>
+<div class="src">
+<p><strong>一手来源</strong></p>
+<ol>
+<li>Anthropic（Applied AI 团队）. <em>Effective context engineering for AI agents</em>（2025-09-29）.<br>
+<a href="https://www.anthropic.com/engineering/effective-context-engineering-for-ai-agents">https://www.anthropic.com/engineering/effective-context-engineering-for-ai-agents</a><br>
+实测状态：HTTP 200（2026-09-04 验证）。注意力预算、n² 关系、性能梯度、压缩／笔记／子 Agent 三手段均出自此文。</li>
+<li>Chroma. <em>Context Rot: How Increasing Input Tokens Impacts LLM Performance</em>（2025-07）.<br>
+<a href="https://research.trychroma.com/context-rot">https://research.trychroma.com/context-rot</a><br>
+实测状态：HTTP 200（2026-09-04 验证）。18 个模型的测试规模、shuffled 优于 structured、LongMemEval 的 300 vs 113k 对比、模型家族失败方式差异均出自此报告。引用标识：<code>hong2025context</code>。</li>
+<li>Liu, N. F. et al. <em>Lost in the Middle: How Language Models Use Long Contexts</em>. TACL 2024.<br>
+<a href="https://arxiv.org/abs/2307.03172">https://arxiv.org/abs/2307.03172</a><br>
+实测状态：HTTP 200（2026-09-04 验证）。"中间迷失"这一现象的原始出处。<strong>注意</strong>：本文的 U 型位置效应与 Chroma 报告中未观测到位置效应的结论需分别归属，不可混用。</li>
+<li>Vaswani, A. et al. <em>Attention Is All You Need</em>（2017）.<br>
+<a href="https://arxiv.org/abs/1706.03762">https://arxiv.org/abs/1706.03762</a><br>
+实测状态：HTTP 200（2026-09-04 验证）。自注意力机制的原始论文，n² 成对关系的来源。</li>
+<li>Anthropic. <em>Introducing Contextual Retrieval</em>.<br>
+<a href="https://www.anthropic.com/news/contextual-retrieval">https://www.anthropic.com/news/contextual-retrieval</a><br>
+实测状态：HTTP 200（2026-09-04 验证）。</li>
+<li>Anthropic 官方文档. <em>Context windows</em>.<br>
+<a href="https://docs.anthropic.com/en/docs/build-with-claude/context-windows">https://docs.anthropic.com/en/docs/build-with-claude/context-windows</a><br>
+实测状态：HTTP 200（2026-09-04 验证）。</li>
+</ol>
+</div>
+
+<h2>核查记录</h2>
+<div class="box">
+<ul>
+<li><strong>来源验证方式</strong>：六条链接全部实际发起 HTTP 请求确认状态码，均为 200，未凭记忆填写。</li>
+<li><strong>内容验证方式</strong>：Chroma 报告与 Anthropic 上下文工程文章均完整抓取原文后提炼，
+文中的数字（18 个模型、194,480 次调用、300 vs 113k tokens、1,000–2,000 tokens 摘要）均直接来自原文，未做估算。</li>
+<li><strong>我做的判断</strong>：把 Chroma"未观测到位置效应"与 Liu 等人"中间迷失"并列呈现，
+是因为网上大量二手文章把两者混为一谈。这是我在比对两份一手来源后自己做出的区分。</li>
+<li><strong>待人工复核</strong>：代码仓库迁移场景为我构造的说明性示例，
+并非来源文章中的真实案例，引用时请注意区分。</li>
+</ul>
+</div>
+
+<div class="foot">
+由 <code>.workbuddy/skills/concept-learning-material/SKILL.md</code> 生成 ｜ 配套资料：agent.html、skill.html、concept-relationship.md
+</div>
+
+</div>
+</body>
+</html>
