@@ -1,6 +1,6 @@
 # 大数据与人工智能 · 个人学习仓库
 
-课程：大数据与人工智能 ｜ 姓名：袁芳祺 ｜ GitHub：yuanfangqi0074 ｜ 仓库公开可访问
+课程：大数据与人工智能 ｜ 姓名：袁芳祺 ｜ 学号：P251012237 ｜ GitHub：yuanfangqi0074 ｜ 仓库公开可访问
 
 ---
 
@@ -246,6 +246,7 @@ git log --oneline       # 看提交历史
 ## 十一、作业提交信息
 
 - **姓名**：袁芳祺
+- **学号**：P251012237
 - **GitHub 仓库链接**：<https://github.com/yuanfangqi0074/bigdata-ai-coursework>
 - **项目级 Skill 路径**：`.workbuddy/skills/concept-learning-material/SKILL.md`
 - **学习资料目录**：`learning-materials/`
